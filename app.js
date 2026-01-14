@@ -4,7 +4,6 @@
  */
 
 // --- FIREBASE CONFIGURATION ---
-// User will replace this with their own config from Firebase Console
 const firebaseConfig = {
     apiKey: "AIzaSyAAk2hfkIpIwFyg8BG9XAYx98OGCBn1yds",
     authDomain: "kirokuhub.firebaseapp.com",
@@ -126,7 +125,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const key = el.getAttribute('data-i18n');
             el.innerText = t(key);
         });
-        document.getElementById('search-input').placeholder = t('search-placeholder');
+        const searchInput = document.getElementById('search-input');
+        if (searchInput) searchInput.placeholder = t('search-placeholder');
     }
 
     const pageState = {
@@ -162,13 +162,12 @@ document.addEventListener('DOMContentLoaded', () => {
     auth.onAuthStateChanged(async (user) => {
         if (user) {
             currentUser = user;
-            authScreen.classList.add('hidden');
-            appContainer.classList.remove('hidden');
+            if (authScreen) authScreen.classList.add('hidden');
+            if (appContainer) appContainer.classList.remove('hidden');
 
-            // Update User Profile UI
             const name = user.displayName || user.email.split('@')[0].toUpperCase();
-            displayNameEl.innerText = name;
-            userAvatarEl.innerText = name.charAt(0);
+            if (displayNameEl) displayNameEl.innerText = name;
+            if (userAvatarEl) userAvatarEl.innerText = name.charAt(0);
 
             await loadUserData();
             applyTheme(state.settings.theme);
@@ -177,50 +176,53 @@ document.addEventListener('DOMContentLoaded', () => {
             renderPage('dashboard');
         } else {
             currentUser = null;
-            appContainer.classList.add('hidden');
-            authScreen.classList.remove('hidden');
+            if (appContainer) appContainer.classList.add('hidden');
+            if (authScreen) authScreen.classList.remove('hidden');
             updateI18n();
-            lucide.createIcons();
+            if (window.lucide) lucide.createIcons();
         }
     });
 
-    authSwitch.addEventListener('click', (e) => {
-        e.preventDefault();
-        isLoginMode = !isLoginMode;
-        authBtn.innerText = isLoginMode ? 'Login' : 'Sign Up';
-        authSubtitle.innerText = isLoginMode ? 'Welcome back! Please login to your account.' : 'Create a new account to sync your data.';
-        authSwitch.innerHTML = isLoginMode ? "Don't have an account? <a href='#'>Sign Up</a>" : "Already have an account? <a href='#'>Login</a>";
-        authError.classList.add('hidden');
-    });
-
-    authForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = authEmail.value;
-        const pass = authPass.value;
-        authError.classList.add('hidden');
-        authBtn.disabled = true;
-        authBtn.innerText = 'Processing...';
-
-        try {
-            if (isLoginMode) {
-                await auth.signInWithEmailAndPassword(email, pass);
-            } else {
-                const userCredential = await auth.createUserWithEmailAndPassword(email, pass);
-                // Initialize new user data in Firestore
-                await db.collection('users').doc(userCredential.user.uid).set({
-                    inventory: [],
-                    transactions: []
-                });
-            }
-        } catch (error) {
-            authError.innerText = error.message;
-            authError.classList.remove('hidden');
+    if (authSwitch) {
+        authSwitch.addEventListener('click', (e) => {
+            e.preventDefault();
+            isLoginMode = !isLoginMode;
             authBtn.innerText = isLoginMode ? 'Login' : 'Sign Up';
-        }
-        authBtn.disabled = false;
-    });
+            authSubtitle.innerText = isLoginMode ? 'Welcome back! Please login to your account.' : 'Create a new account to sync your data.';
+            authSwitch.innerHTML = isLoginMode ? "Don't have an account? <a href='#'>Sign Up</a>" : "Already have an account? <a href='#'>Login</a>";
+            authError.classList.add('hidden');
+        });
+    }
 
-    // Google Sign-in
+    if (authForm) {
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = authEmail.value;
+            const pass = authPass.value;
+            authError.classList.add('hidden');
+            authBtn.disabled = true;
+            authBtn.innerText = 'Processing...';
+
+            try {
+                if (isLoginMode) {
+                    await auth.signInWithEmailAndPassword(email, pass);
+                } else {
+                    const userCredential = await auth.createUserWithEmailAndPassword(email, pass);
+                    await db.collection('users').doc(userCredential.user.uid).set({
+                        inventory: [],
+                        transactions: [],
+                        settings: state.settings
+                    });
+                }
+            } catch (error) {
+                authError.innerText = error.message;
+                authError.classList.remove('hidden');
+                authBtn.innerText = isLoginMode ? 'Login' : 'Sign Up';
+            }
+            authBtn.disabled = false;
+        });
+    }
+
     const googleBtn = document.getElementById('google-btn');
     if (googleBtn) {
         googleBtn.onclick = async () => {
@@ -234,40 +236,9 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // Forgot Password Logic
-    const forgotBtn = document.getElementById('forgot-password');
-    if (forgotBtn) {
-        forgotBtn.onclick = async (e) => {
-            e.preventDefault();
-            const email = authEmail.value;
-            if (!email) {
-                authError.innerText = "Please enter your email address first.";
-                authError.classList.remove('hidden');
-                authError.style.background = "rgba(239, 68, 68, 0.1)";
-                authError.style.color = "var(--danger)";
-                return;
-            }
-
-            try {
-                await auth.sendPasswordResetEmail(email);
-                authError.innerText = "Success! Password reset email sent. Please check your inbox.";
-                authError.classList.remove('hidden');
-                authError.style.background = "rgba(16, 185, 129, 0.1)";
-                authError.style.color = "var(--success)";
-            } catch (error) {
-                authError.innerText = error.message;
-                authError.classList.remove('hidden');
-                authError.style.background = "rgba(239, 68, 68, 0.1)";
-                authError.style.color = "var(--danger)";
-            }
-        };
-    }
-
-    // --- THEME & STYLE ENGINE ---
     function applyTheme(theme) {
         state.settings.theme = theme;
         document.body.classList.remove('light-mode');
-
         if (theme === 'light') {
             document.body.classList.add('light-mode');
         } else if (theme === 'system') {
@@ -284,7 +255,6 @@ document.addEventListener('DOMContentLoaded', () => {
         saveData();
     }
 
-    // --- CLOUD SYNC LOGIC ---
     async function loadUserData() {
         if (!currentUser) return;
         try {
@@ -315,12 +285,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${state.settings.currency} ${parseFloat(amount).toFixed(2)}`;
     }
 
-    // --- CORE APP LOGIC (Updated for Cloud) ---
     function updateStats() {
         let totalProfit = 0;
-        state.transactions.forEach(t => {
-            if (t.type === 'profit') totalProfit += t.amount;
-        });
+        state.transactions.forEach(t => { if (t.type === 'profit') totalProfit += t.amount; });
 
         let totalExpense = 0;
         state.inventory.forEach(i => {
@@ -333,13 +300,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const profitEl = document.querySelector('.ocean-gradient .value');
         const expenseEl = document.querySelector('.sunset-gradient .value');
+        const lowStockEl = document.querySelector('.berry-gradient .value');
+        const invCountEl = document.querySelector('.forest-gradient .value');
 
-        if (profitEl) {
-            profitEl.innerText = formatCurrency(totalProfit);
-        }
-        if (expenseEl) {
-            expenseEl.innerText = formatCurrency(totalExpense);
-        }
+        if (profitEl) profitEl.innerText = formatCurrency(totalProfit);
+        if (expenseEl) expenseEl.innerText = formatCurrency(totalExpense);
+        if (lowStockEl) lowStockEl.innerText = state.inventory.filter(i => i.stock < 5).length;
+        if (invCountEl) invCountEl.innerText = state.inventory.length;
     }
 
     function renderPaginationControls(containerId, totalItems, currentPage, targetPageKey) {
@@ -347,7 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (totalPages <= 1) return '';
         return `
             <div class="pagination">
-                <span class="page-info">Page ${currentPage + 1} of ${totalPages}</span>
+                <span class="page-info">Page ${currentPage + 1} / ${totalPages}</span>
                 <button class="pagination-btn" ${currentPage === 0 ? 'disabled' : ''} 
                     onclick="window.activeApp.changePage('${targetPageKey}', ${currentPage - 1})">Prev</button>
                 <button class="pagination-btn" ${currentPage >= totalPages - 1 ? 'disabled' : ''} 
@@ -436,7 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderTransactions();
                 updateStats();
                 renderDashboardChart();
-                lucide.createIcons();
+                if (window.lucide) lucide.createIcons();
             }, 0);
         } else if (page === 'inventory') {
             const displayInventory = [...state.inventory].reverse();
@@ -446,22 +413,22 @@ document.addEventListener('DOMContentLoaded', () => {
             contentArea.innerHTML = `
                 <section class="page inventory active">
                     <div class="glass-card mb-2">
-                        <h2>Add New Product</h2>
+                        <h2 data-i18n="add-product">${t('add-product')}</h2>
                         <form id="new-item-form" class="automation-flex">
                             <input type="date" id="new-date" value="${new Date().toISOString().split('T')[0]}" class="flex-grow">
-                            <input type="text" id="new-sku" placeholder="SKU ID" class="flex-grow">
-                            <input type="text" id="new-name" placeholder="Product Name" class="flex-grow">
-                            <input type="number" id="new-stock" placeholder="Initial Stock" style="width:100px">
+                            <input type="text" id="new-sku" placeholder="${t('sku')}" class="flex-grow">
+                            <input type="text" id="new-name" placeholder="${t('product')}" class="flex-grow">
+                            <input type="number" id="new-stock" placeholder="${t('stock')}" style="width:100px">
                             <input type="number" id="new-cost" placeholder="Cost" style="width:100px">
-                            <input type="number" id="new-price" placeholder="Price" style="width:100px">
-                            <button type="submit" class="btn-primary">Add Item</button>
+                            <input type="number" id="new-price" placeholder="Sell Price" style="width:100px">
+                            <button type="submit" class="btn-primary" data-i18n="add-product">${t('add-product')}</button>
                         </form>
                     </div>
                     <div class="glass-card">
                         <table class="data-table">
-                            <thead><tr><th>Entry Date</th><th>SKU</th><th>Name</th><th>Stock</th><th>Cost</th><th>Price</th><th>Profit</th><th>Action</th></tr></thead>
+                            <thead><tr><th data-i18n="date">${t('date')}</th><th data-i18n="sku">${t('sku')}</th><th data-i18n="product">${t('product')}</th><th data-i18n="stock">${t('stock')}</th><th>Cost</th><th data-i18n="price">${t('price')}</th><th>Profit</th><th data-i18n="action">${t('action')}</th></tr></thead>
                             <tbody>
-                                ${displayInventory.length === 0 ? '<tr><td colspan="8" style="text-align:center">No inventory found.</td></tr>' :
+                                ${displayInventory.length === 0 ? `<tr><td colspan="8" style="text-align:center">No inventory.</td></tr>` :
                     paginatedInv.map((item) => {
                         const originalIdx = state.inventory.indexOf(item);
                         const profit = (parseFloat(item.price || 0) - parseFloat(item.cost || 0)).toFixed(2);
@@ -470,10 +437,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                         <td>${item.sku}</td>
                                         <td>${item.name}</td>
                                         <td>${item.stock} <span class="trend ${item.stock < 5 ? 'warning' : ''}">${item.stock < 5 ? 'Low' : ''}</span></td>
-                                        <td>PHP ${parseFloat(item.cost).toFixed(2)}</td>
-                                        <td>PHP ${parseFloat(item.price).toFixed(2)}</td>
-                                        <td style="color:var(--success)">PHP ${profit}</td>
-                                        <td><button class="btn-secondary" onclick="window.activeApp.deleteItem(${originalIdx})">Delete</button></td>
+                                        <td>${formatCurrency(item.cost)}</td>
+                                        <td>${formatCurrency(item.price)}</td>
+                                        <td style="color:var(--success)">${formatCurrency(profit)}</td>
+                                        <td><button class="btn-secondary" onclick="window.activeApp.deleteItem(${originalIdx})" data-i18n="action">${t('action')}</button></td>
                                     </tr>`;
                     }).join('')}
                             </tbody>
@@ -511,6 +478,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 };
             }
+            if (window.lucide) lucide.createIcons();
         } else if (page === 'finance') {
             const allSales = state.transactions.map((t, i) => ({ ...t, originalIdx: i })).filter(t => t.type === 'profit');
             const startIdx = pageState.finance * ITEMS_PER_PAGE;
@@ -519,27 +487,26 @@ document.addEventListener('DOMContentLoaded', () => {
             contentArea.innerHTML = `
                 <section class="page active">
                     <div class="glass-card mb-2">
-                        <h2>Sell Product</h2>
+                        <h2 data-i18n="add-sale">${t('add-sale')}</h2>
                         <form id="sales-form" class="automation-flex">
                             <input type="date" id="s-date" value="${new Date().toISOString().split('T')[0]}">
-                            <select id="s-sku">
+                            <select id="s-sku" class="flex-grow">
                                 <option value="">Select SKU</option>
                                 ${state.inventory.map(i => `<option value="${i.sku}">${i.sku}</option>`).join('')}
                             </select>
-                            <input type="text" id="s-name" placeholder="Product Name" readonly class="flex-grow">
                             <input type="number" id="s-qty" placeholder="Qty" style="width:90px">
-                            <button type="submit" class="btn-primary">Confirm Sale</button>
+                            <button type="submit" class="btn-primary" data-i18n="add-sale">${t('add-sale')}</button>
                         </form>
                     </div>
                     <div class="glass-card">
                         <table class="data-table">
-                            <thead><tr><th>Date</th><th>Detail</th><th>Qty</th><th>Profit</th><th>Action</th></tr></thead>
+                            <thead><tr><th data-i18n="date">${t('date')}</th><th data-i18n="description">${t('description')}</th><th data-i18n="amount">${t('amount')}</th><th data-i18n="action">${t('action')}</th></tr></thead>
                             <tbody>
-                                ${allSales.length === 0 ? '<tr><td colspan="5" style="text-align:center">No records.</td></tr>' :
-                    paginatedSales.map(t => `<tr>
-                                    <td>${t.date}</td><td>${t.desc}</td><td>${t.qty}</td>
-                                    <td style="color:var(--success)">+PHP ${t.amount.toFixed(2)}</td>
-                                    <td><button class="btn-secondary" onclick="window.activeApp.deleteTransaction(${t.originalIdx})">Remove</button></td>
+                                ${allSales.length === 0 ? '<tr><td colspan="4" style="text-align:center">No sales.</td></tr>' :
+                    paginatedSales.map(t_item => `<tr>
+                                    <td>${t_item.date}</td><td>${t_item.desc}</td>
+                                    <td style="color:var(--success)">+ ${formatCurrency(t_item.amount)}</td>
+                                    <td><button class="btn-secondary" onclick="window.activeApp.deleteTransaction(${t_item.originalIdx})">${t('action')}</button></td>
                                 </tr>`).join('')}
                             </tbody>
                         </table>
@@ -547,14 +514,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </section>
             `;
-            const skuSelect = document.getElementById('s-sku');
-            const nameInput = document.getElementById('s-name');
-            if (skuSelect) {
-                skuSelect.onchange = (e) => {
-                    const item = state.inventory.find(i => i.sku === e.target.value);
-                    nameInput.value = item ? item.name : '';
-                };
-            }
             const salesForm = document.getElementById('sales-form');
             if (salesForm) {
                 salesForm.onsubmit = async (e) => {
@@ -562,7 +521,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const rawDate = document.getElementById('s-date').value;
                     const dateParts = rawDate.split('-');
                     const formattedDate = `${dateParts[1]}/${dateParts[2]}/${dateParts[0]}`;
-                    const sku = skuSelect.value;
+                    const sku = document.getElementById('s-sku').value;
                     const qty = parseInt(document.getElementById('s-qty').value);
                     const item = state.inventory.find(i => i.sku === sku);
                     if (item && qty > 0 && item.stock >= qty) {
@@ -579,26 +538,42 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                         await saveData();
                         renderPage('finance');
-                    } else if (item && item.stock < qty) {
-                        alert("Insufficient stock!");
-                    }
+                    } else { alert("Error: Check stock and selection."); }
                 };
             }
+            if (window.lucide) lucide.createIcons();
+        } else if (page === 'settings') {
+            renderSettings();
         } else if (page === 'filtered') {
             let filteredResults = [];
             let pageTitle = '';
-            let totalAmount = 0;
-
             if (filterType === 'profit') {
                 filteredResults = state.transactions.map((t, i) => ({ ...t, originalIdx: i })).filter(t => t.type === 'profit');
-                pageTitle = '💰 All Profit Transactions';
-                totalAmount = filteredResults.reduce((sum, t) => sum + t.amount, 0);
-            } else {
+                pageTitle = t('total-profit');
+            } else if (filterType === 'expense') {
                 filteredResults = state.transactions.map((t, i) => ({ ...t, originalIdx: i })).filter(t => t.type === 'stock-in');
-                pageTitle = '💳 All Expense Transactions';
-                totalAmount = filteredResults.reduce((sum, t) => sum + t.amount, 0);
+                pageTitle = t('total-expense');
+            } else if (filterType === 'low-stock') {
+                const lowStockList = state.inventory.filter(i => i.stock < 5);
+                contentArea.innerHTML = `
+                    <section class="page active">
+                        <div class="glass-card mb-2"><h2>${t('low-stock')}</h2></div>
+                        <div class="glass-card">
+                            <table class="data-table">
+                                <thead><tr><th>SKU</th><th>Name</th><th>Stock</th></tr></thead>
+                                <tbody>
+                                    ${lowStockList.map(i => `<tr><td>${i.sku}</td><td>${i.name}</td><td style="color:var(--danger)">${i.stock}</td></tr>`).join('')}
+                                </tbody>
+                            </table>
+                            <button class="btn-secondary mt-2" onclick="window.activeApp.renderPage('dashboard')">Back</button>
+                        </div>
+                    </section>
+                `;
+                if (window.lucide) lucide.createIcons();
+                return;
             }
 
+            const totalAmount = filteredResults.reduce((sum, t) => sum + t.amount, 0);
             const startIdx = pageState.filtered * ITEMS_PER_PAGE;
             const paginatedResults = filteredResults.slice(startIdx, startIdx + ITEMS_PER_PAGE);
 
@@ -608,25 +583,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="filtered-header">
                             <div>
                                 <h2>${pageTitle}</h2>
-                                <p class="filtered-summary">
-                                    <span class="record-count">${filteredResults.length} records</span>
-                                    <span class="total-amount ${filterType === 'profit' ? 'profit' : 'expense'}">
-                                        Total: PHP ${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                                    </span>
-                                </p>
+                                <p class="filtered-summary">Total: ${formatCurrency(totalAmount)}</p>
                             </div>
-                            <button class="btn-secondary" onclick="window.activeApp.renderPage('dashboard')"><i data-lucide="arrow-left"></i> Back</button>
+                            <button class="btn-secondary" onclick="window.activeApp.renderPage('dashboard')">Back</button>
                         </div>
                     </div>
                     <div class="glass-card">
                         <table class="data-table">
-                            <thead><tr><th>Date</th><th>Detail</th><th>${filterType === 'profit' ? 'Qty' : 'Category'}</th><th>Amount</th><th>Action</th></tr></thead>
+                            <thead><tr><th>${t('date')}</th><th>${t('description')}</th><th>${t('amount')}</th><th>${t('action')}</th></tr></thead>
                             <tbody>
-                                ${filteredResults.length === 0 ? '<tr><td colspan="5" style="text-align:center">No records.</td></tr>' :
-                    paginatedResults.map(t => `<tr>
-                                    <td>${t.date}</td><td>${t.desc}</td><td>${filterType === 'profit' ? t.qty : t.category}</td>
-                                    <td style="color:${filterType === 'profit' ? 'var(--success)' : 'var(--danger)'}">${filterType === 'profit' ? '+' : '-'} PHP ${t.amount.toFixed(2)}</td>
-                                    <td><button class="btn-secondary" onclick="window.activeApp.deleteFilteredTransaction(${t.originalIdx})">Remove</button></td>
+                                ${paginatedResults.map(t_item => `<tr>
+                                    <td>${t_item.date}</td><td>${t_item.desc}</td>
+                                    <td style="color:${t_item.type === 'profit' ? 'var(--success)' : 'var(--danger)'}">${formatCurrency(t_item.amount)}</td>
+                                    <td><button class="btn-secondary" onclick="window.activeApp.deleteTransaction(${t_item.originalIdx})">Remove</button></td>
                                 </tr>`).join('')}
                             </tbody>
                         </table>
@@ -634,7 +603,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </section>
             `;
-            lucide.createIcons();
+            if (window.lucide) lucide.createIcons();
         } else if (page === 'search') {
             const query = searchQuery.toLowerCase();
             const results = state.transactions.map((t, i) => ({ ...t, originalIdx: i })).filter(t =>
@@ -646,35 +615,34 @@ document.addEventListener('DOMContentLoaded', () => {
             contentArea.innerHTML = `
                 <section class="page active">
                     <div class="glass-card mb-2">
-                        <h2>Results for: "${searchQuery}"</h2>
-                        <p>${results.length} records found</p>
+                        <h2 data-i18n="nav-dashboard">Search Results</h2>
+                        <p>${results.length} records found for "${searchQuery}"</p>
                     </div>
                     <div class="glass-card">
                         <table class="data-table">
-                            <thead><tr><th>Date</th><th>Detail</th><th>Category</th><th>Amount</th><th>Action</th></tr></thead>
+                            <thead><tr><th>${t('date')}</th><th>${t('description')}</th><th>${t('amount')}</th><th>${t('action')}</th></tr></thead>
                             <tbody>
-                                ${paginated.map(t => `<tr>
-                                    <td>${t.date}</td><td>${t.desc}</td><td>${t.category}</td>
-                                    <td style="color:${t.type === 'profit' ? 'var(--success)' : 'var(--danger)'}">${t.type === 'profit' ? '+' : '-'} PHP ${t.amount.toFixed(2)}</td>
-                                    <td><button class="btn-secondary" onclick="window.activeApp.deleteTransaction(${t.originalIdx})">Remove</button></td>
+                                ${paginated.map(t_item => `<tr>
+                                    <td>${t_item.date}</td><td>${t_item.desc}</td>
+                                    <td style="color:${t_item.type === 'profit' ? 'var(--success)' : 'var(--danger)'}">${formatCurrency(t_item.amount)}</td>
+                                    <td><button class="btn-secondary" onclick="window.activeApp.deleteTransaction(${t_item.originalIdx})">Remove</button></td>
                                 </tr>`).join('')}
                             </tbody>
                         </table>
                         ${renderPaginationControls('s-pagination', results.length, pageState.search, 'search')}
                     </div>
+                    <button class="btn-secondary mt-2" onclick="window.activeApp.renderPage('dashboard')">Back</button>
                 </section>
             `;
-        } else if (page === 'settings') {
-            renderSettings();
+            if (window.lucide) lucide.createIcons();
         }
     }
 
     function renderSettings() {
-        const contentArea = document.querySelector('.main-content');
+        const contentArea = document.getElementById('content-area');
         contentArea.innerHTML = `
             <section class="page settings active">
                 <div class="settings-grid">
-                    <!-- Profile Setting -->
                     <div class="settings-section">
                         <h3 data-i18n="settings-profile"><i data-lucide="user"></i> ${t('settings-profile')}</h3>
                         <div class="settings-option">
@@ -687,8 +655,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <button class="btn-primary" onclick="window.activeApp.updateProfile()" data-i18n="btn-update" style="width:100%">${t('btn-update')}</button>
                     </div>
-
-                    <!-- Localization Setting -->
                     <div class="settings-section">
                         <h3 data-i18n="settings-localization"><i data-lucide="globe"></i> ${t('settings-localization')}</h3>
                         <div class="settings-option">
@@ -707,8 +673,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             </select>
                         </div>
                     </div>
-
-                    <!-- Appearance Setting -->
                     <div class="settings-section">
                         <h3 data-i18n="settings-appearance"><i data-lucide="palette"></i> ${t('settings-appearance')}</h3>
                         <div class="settings-option">
@@ -735,19 +699,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="glass-preview">Preview Box / 预览框</div>
                         </div>
                     </div>
-
-                    <!-- Data Center -->
                     <div class="settings-section">
                         <h3 data-i18n="settings-data"><i data-lucide="database"></i> ${t('settings-data')}</h3>
                         <div class="data-stats">
-                            <div class="stat-box">
-                                <span class="val">${state.inventory.length}</span>
-                                <span class="lab" data-i18n="sku">Products</span>
-                            </div>
-                            <div class="stat-box">
-                                <span class="val">${state.transactions.length}</span>
-                                <span class="lab" data-i18n="action">Records</span>
-                            </div>
+                            <div class="stat-box"><span class="val">${state.inventory.length}</span><span class="lab" data-i18n="sku">Products</span></div>
+                            <div class="stat-box"><span class="val">${state.transactions.length}</span><span class="lab" data-i18n="action">Records</span></div>
                         </div>
                         <button class="btn-primary mb-1" onclick="window.activeApp.exportData()" data-i18n="btn-export" style="width:100%">Export (JSON)</button>
                         <button class="btn-danger-outline" onclick="document.getElementById('import-input').click()" data-i18n="btn-import">Import Backup</button>
@@ -756,7 +712,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </section>
         `;
-        lucide.createIcons();
+        if (window.lucide) lucide.createIcons();
     }
 
     function renderTransactions() {
@@ -771,10 +727,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td><span class="status-badge ${t_item.type}">${t_item.type === 'profit' ? 'Profit' : 'Expense'}</span></td>
             </tr>
         `).join('');
-        document.getElementById('dash-pagination').innerHTML = renderPaginationControls('dash-pagination', state.transactions.length, pageState.dashboard, 'dashboard');
+        const dashPagination = document.getElementById('dash-pagination');
+        if (dashPagination) dashPagination.innerHTML = renderPaginationControls('dash-pagination', state.transactions.length, pageState.dashboard, 'dashboard');
     }
 
-    // --- CHART LOGIC ---
     let dashboardChartInstance = null;
     function renderDashboardChart() {
         const canvas = document.getElementById('profitExpenseChart');
@@ -784,15 +740,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const monthlyData = {};
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-        state.transactions.forEach(t => {
-            if (!t.date) return;
-            const parts = t.date.split('/');
+        state.transactions.forEach(t_item => {
+            if (!t_item.date) return;
+            const parts = t_item.date.split('/');
             const month = parseInt(parts[0]) - 1;
             const year = parts[2];
             const key = `${monthNames[month]} ${year}`;
             if (!monthlyData[key]) monthlyData[key] = { profit: 0, expense: 0, order: new Date(year, month) };
-            if (t.type === 'profit') monthlyData[key].profit += t.amount;
-            else if (t.type === 'stock-in') monthlyData[key].expense += t.amount;
+            if (t_item.type === 'profit') monthlyData[key].profit += t_item.amount;
+            else if (t_item.type === 'stock-in') monthlyData[key].expense += t_item.amount;
         });
 
         const sortedKeys = Object.keys(monthlyData).sort((a, b) => monthlyData[a].order - monthlyData[b].order).slice(-6);
@@ -815,13 +771,7 @@ document.addEventListener('DOMContentLoaded', () => {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        labels: {
-                            color: state.settings.theme === 'light' ? '#64748b' : '#fff'
-                        }
-                    }
-                },
+                plugins: { legend: { labels: { color: state.settings.theme === 'light' ? '#64748b' : '#fff' } } },
                 scales: {
                     x: { ticks: { color: state.settings.theme === 'light' ? '#64748b' : '#94a3b8' } },
                     y: { ticks: { color: state.settings.theme === 'light' ? '#64748b' : '#94a3b8' } }
@@ -830,20 +780,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- GLOBAL SEARCH ---
     const searchForm = document.getElementById('global-search');
     if (searchForm) {
         searchForm.onsubmit = (e) => {
             e.preventDefault();
             searchQuery = document.getElementById('search-input').value;
-            if (searchQuery) {
-                pageState.search = 0;
-                renderPage('search');
-            }
+            if (searchQuery) { pageState.search = 0; renderPage('search'); }
         };
     }
 
-    // --- WINDOW ACTIONS ---
     window.activeApp = {
         renderPage: (page) => {
             if (pageState[page] !== undefined) pageState[page] = 0;
@@ -853,105 +798,72 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (i.getAttribute('data-page') === page) i.classList.add('active');
             });
         },
-        changePage: (key, idx) => {
-            pageState[key] = idx;
-            renderPage(key);
-        },
+        changePage: (key, idx) => { pageState[key] = idx; renderPage(key); },
         deleteItem: async (idx) => {
-            const sku = state.inventory[idx].sku;
-            state.inventory.splice(idx, 1);
-            state.transactions = state.transactions.filter(t => !(t.sku === sku && t.type === 'stock-in'));
-            await saveData();
-            renderPage('inventory');
+            if (confirm("Delete this product?")) {
+                const sku = state.inventory[idx].sku;
+                state.inventory.splice(idx, 1);
+                state.transactions = state.transactions.filter(t_item => t_item.sku !== sku);
+                await saveData();
+                renderPage('inventory');
+            }
         },
         deleteTransaction: async (idx) => {
-            const t = state.transactions[idx];
-            if (t) {
-                const item = state.inventory.find(i => i.sku === t.sku);
+            const t_item = state.transactions[idx];
+            if (t_item) {
+                const item = state.inventory.find(i => i.sku === t_item.sku);
                 if (item) {
-                    if (t.type === 'profit') item.stock += (t.qty || 0);
-                    else if (t.type === 'stock-in') item.stock -= (t.qty || 0);
+                    if (t_item.type === 'profit') item.stock += (t_item.qty || 0);
+                    else if (t_item.type === 'stock-in') item.stock -= (t_item.qty || 0);
                 }
                 state.transactions.splice(idx, 1);
                 await saveData();
-                renderPage('dashboard');
+                location.reload();
             }
         },
-        showFilteredList: (type) => {
-            filterType = type;
-            pageState.filtered = 0;
-            renderPage('filtered');
-        },
-        deleteFilteredTransaction: async (idx) => {
-            await window.activeApp.deleteTransaction(idx);
-            renderPage('filtered');
-        },
-        logout: () => {
-            auth.signOut();
-        },
+        showFilteredList: (type) => { filterType = type; pageState.filtered = 0; renderPage('filtered'); },
         exportData: () => {
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
-            const downloadAnchorNode = document.createElement('a');
-            downloadAnchorNode.setAttribute("href", dataStr);
-            downloadAnchorNode.setAttribute("download", `kirokuhub_backup_${new Date().toISOString().split('T')[0]}.json`);
-            document.body.appendChild(downloadAnchorNode);
-            downloadAnchorNode.click();
-            downloadAnchorNode.remove();
+            const dl = document.createElement('a');
+            dl.setAttribute("href", dataStr);
+            dl.setAttribute("download", `kirokuhub_backup_${new Date().toISOString().split('T')[0]}.json`);
+            dl.click();
         },
         importData: (input) => {
             const file = input.files[0];
             if (!file) return;
-            const reader = new FileReader();
-            reader.onload = async (e) => {
+            const r = new FileReader();
+            r.onload = async (e) => {
                 try {
-                    const importedState = JSON.parse(e.target.result);
-                    if (importedState.transactions && importedState.inventory) {
-                        state.transactions = importedState.transactions;
-                        state.inventory = importedState.inventory;
-                        if (importedState.settings) state.settings = importedState.settings;
+                    const im = JSON.parse(e.target.result);
+                    if (im.transactions && im.inventory) {
+                        state.transactions = im.transactions;
+                        state.inventory = im.inventory;
+                        if (im.settings) state.settings = im.settings;
                         await saveData();
-                        alert('Data imported successfully! The page will reload.');
+                        alert('Data imported!');
                         location.reload();
                     }
-                } catch (err) { alert('Failed to parse data.'); }
+                } catch (err) { alert('Failed to parse.'); }
             };
-            reader.readAsText(file);
+            r.readAsText(file);
         },
-        changeLang: (lang) => {
-            state.settings.language = lang;
-            updateI18n();
-            saveData();
-            renderSettings();
-        },
-        changeCurrency: (curr) => {
-            state.settings.currency = curr;
-            saveData();
-            renderSettings();
-            updateStats();
-        },
-        changeTheme: (theme) => {
-            applyTheme(theme);
-            renderSettings();
-        },
-        changeGlass: (val) => {
-            applyGlass(val);
-            renderSettings();
-        },
+        changeLang: (lang) => { state.settings.language = lang; updateI18n(); saveData(); renderSettings(); },
+        changeCurrency: (curr) => { state.settings.currency = curr; saveData(); renderSettings(); updateStats(); },
+        changeTheme: (theme) => { applyTheme(theme); renderSettings(); },
+        changeGlass: (val) => { applyGlass(val); renderSettings(); },
         updateProfile: async () => {
-            const newName = document.getElementById('set-name').value;
-            const newPass = document.getElementById('set-pass').value;
+            const n = document.getElementById('set-name').value;
+            const p = document.getElementById('set-pass').value;
             try {
-                if (newName !== currentUser.displayName) {
-                    await currentUser.updateProfile({ displayName: newName });
-                    displayNameEl.innerText = newName.toUpperCase();
-                    userAvatarEl.innerText = newName.charAt(0).toUpperCase();
+                if (n !== currentUser.displayName) {
+                    await currentUser.updateProfile({ displayName: n });
+                    if (displayNameEl) displayNameEl.innerText = n.toUpperCase();
                 }
-                if (newPass) {
-                    await currentUser.updatePassword(newPass);
-                }
-                alert('Profile updated successfully!');
-                renderSettings();
+                if (p) await currentUser.updatePassword(p);
+                alert('Success!');
             } catch (err) { alert(err.message); }
-        }
+        },
+        logout: () => { auth.signOut(); }
     };
 });

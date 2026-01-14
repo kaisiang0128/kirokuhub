@@ -82,15 +82,15 @@
             <nav class="nav-menu">
                 <a href="#" class="nav-item active" data-page="dashboard">
                     <i data-lucide="layout-dashboard"></i>
-                    <span>Dashboard</span>
+                    <span data-i18n="nav-dashboard">Dashboard</span>
                 </a>
                 <a href="#" class="nav-item" data-page="inventory">
                     <i data-lucide="box"></i>
-                    <span>Inventory</span>
+                    <span data-i18n="nav-inventory">Inventory</span>
                 </a>
                 <a href="#" class="nav-item" data-page="finance">
                     <i data-lucide="dollar-sign"></i>
-                    <span>Finance</span>
+                    <span data-i18n="nav-finance">Finance</span>
                 </a>
                 <a href="#" class="nav-item" data-page="settings">
                     <i data-lucide="settings"></i>
@@ -124,58 +124,77 @@
                 <!-- Dashboard Content (Default) -->
                 <section class="page dashboard active">
                     <div class="stats-grid">
-                        <div class="stat-card gold-gradient">
+                        <div class="stat-card ocean-gradient">
                             <div class="stat-info">
-                                <h3>总利润 (Profit)</h3>
-                                <p class="value">PHP 0.00</p>
-                                <span class="trend up"><i data-lucide="trending-up"></i> 0%</span>
+                                <h3 data-i18n="total-profit">Total Profit</h3>
+                                <p class="value">0.00</p>
+                                <span class="trend up"><i data-lucide="trending-up"></i> +12.5%</span>
                             </div>
-                            <div class="stat-icon"><i data-lucide="wallet"></i></div>
+                            <div class="stat-icon clickable" onclick="window.activeApp.showFilteredList('profit')"
+                                title="View all">
+                                <i data-lucide="wallet"></i>
+                            </div>
                         </div>
                         <div class="stat-card sunset-gradient">
                             <div class="stat-info">
-                                <h3>总支出 (Expense)</h3>
-                                <p class="value">PHP 0.00</p>
-                                <span class="trend down"><i data-lucide="trending-down"></i> 0%</span>
+                                <h3 data-i18n="total-expense">Total Expense</h3>
+                                <p class="value">0.00</p>
+                                <span class="trend down"><i data-lucide="trending-down"></i> Based on Cost</span>
                             </div>
-                            <div class="stat-icon"><i data-lucide="credit-card"></i></div>
+                            <div class="stat-icon clickable" onclick="window.activeApp.showFilteredList('expense')"
+                                title="View all">
+                                <i data-lucide="credit-card"></i>
+                            </div>
                         </div>
-                        <div class="stat-card ocean-gradient">
+                        <div class="stat-card berry-gradient">
                             <div class="stat-info">
-                                <h3>库存预警 (Stock)</h3>
-                                <p class="value">0 件急需补货</p>
-                                <span class="trend warning">状态良好</span>
+                                <h3 data-i18n="low-stock">Low Stock</h3>
+                                <p class="value">0</p>
+                                <span class="trend warn"><i data-lucide="alert-circle"></i> Requires attention</span>
                             </div>
-                            <div class="stat-icon"><i data-lucide="alert-triangle"></i></div>
+                            <div class="stat-icon clickable" onclick="window.activeApp.showFilteredList('low-stock')"
+                                title="View all">
+                                <i data-lucide="package"></i>
+                            </div>
+                        </div>
+                        <div class="stat-card forest-gradient">
+                            <div class="stat-info">
+                                <h3 data-i18n="inventory-count">Inventory Items</h3>
+                                <p class="value">0</p>
+                                <span class="trend up"><i data-lucide="box"></i> Active items</span>
+                            </div>
+                            <div class="stat-icon">
+                                <i data-lucide="database"></i>
+                            </div>
                         </div>
                     </div>
-
-
+                    <div class="chart-section glass-card">
+                        <div class="chart-header">
+                            <h2 data-i18n="recent-activity">📊 Recent Activity</h2>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="profitExpenseChart"></canvas>
+                        </div>
+                    </div>
                     <div class="recent-activity glass-card">
                         <div class="card-header">
-                            <h2>最近交易</h2>
-                            <a href="#" class="view-all">查看全部</a>
+                            <h2 data-i18n="recent-activity">Recent Activity</h2>
                         </div>
                         <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th>日期</th>
-                                    <th>详情</th>
-                                    <th>分类</th>
-                                    <th>金额</th>
-                                    <th>状态</th>
+                                    <th data-i18n="date">Date</th>
+                                    <th data-i18n="description">Description</th>
+                                    <th data-i18n="type">Type</th>
+                                    <th data-i18n="amount">Amount</th>
+                                    <th data-i18n="status">Status</th>
                                 </tr>
                             </thead>
-                            <tbody id="recent-transactions">
-                                <!-- JS will populate this -->
-                            </tbody>
+                            <tbody id="recent-transactions"></tbody>
                         </table>
+                        <div id="dash-pagination"></div>
                     </div>
                 </section>
-            </div>
-            <!-- Settings Page (Dynamic) -->
-            <div id="settings-page" class="page hidden">
-                <!-- Settings content will be rendered here by JS -->
             </div>
         </main>
     </div>
