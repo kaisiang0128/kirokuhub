@@ -5,7 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KirokuHub | Merchant System</title>
-    <meta name="description" content="专业的记账管理系统，记录收支、库存及利润。">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -23,7 +22,7 @@
 </head>
 
 <body class="dark-theme">
-    <!-- Auth Screen Overlay -->
+    <!-- Auth Overlay -->
     <div id="auth-screen" class="auth-overlay hidden">
         <div class="auth-card glass-card">
             <div class="auth-header">
@@ -31,7 +30,6 @@
                 <h1>KirokuHub</h1>
                 <p id="auth-subtitle">Welcome back! Please login to your account.</p>
             </div>
-
             <form id="auth-form">
                 <div class="input-group">
                     <label>Email Address</label>
@@ -40,11 +38,9 @@
                         <input type="email" id="auth-email" placeholder="name@company.com" required>
                     </div>
                 </div>
-
                 <div class="input-group">
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <label style="margin-bottom: 0;">Password</label>
+                    <div style="display: flex; justify-content: space-between;">
+                        <label>Password</label>
                         <a href="#" id="forgot-password" class="forgot-password">Forgot?</a>
                     </div>
                     <div class="input-wrapper">
@@ -52,28 +48,20 @@
                         <input type="password" id="auth-password" placeholder="••••••••" required>
                     </div>
                 </div>
-
                 <div id="auth-error" class="error-msg hidden"></div>
-
                 <button type="submit" id="auth-btn" class="btn-primary auth-submit">Login</button>
-
-                <div class="auth-divider">
-                    <span>OR</span>
-                </div>
-
+                <div class="auth-divider"><span>OR</span></div>
                 <button type="button" id="google-btn" class="btn-secondary google-submit">
-                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google"
+                        style="width:18px;">
                     Continue with Google
                 </button>
-
-                <p class="auth-switch">
-                    Don't have an account? <a href="#" id="switch-auth">Sign Up</a>
-                </p>
+                <p class="auth-switch">Don't have an account? <a href="#" id="switch-auth">Sign Up</a></p>
             </form>
         </div>
     </div>
+
     <div class="app-container">
-        <!-- Sidebar -->
         <aside class="sidebar">
             <div class="logo">
                 <i data-lucide="moon" class="shopee-orange"></i>
@@ -110,91 +98,16 @@
             </div>
         </aside>
 
-        <!-- Main Content -->
         <main class="main-content">
             <header class="top-header">
                 <form id="global-search" class="search-bar">
                     <i data-lucide="search"></i>
                     <input type="text" id="search-input" placeholder="Search SKU or Product Name...">
-                    <button type="submit" style="display: none;"></button>
                 </form>
             </header>
 
             <div id="content-area">
-                <!-- Dashboard Content (Default) -->
-                <section class="page dashboard active">
-                    <div class="stats-grid">
-                        <div class="stat-card ocean-gradient">
-                            <div class="stat-info">
-                                <h3 data-i18n="total-profit">Total Profit</h3>
-                                <p class="value">0.00</p>
-                                <span class="trend up"><i data-lucide="trending-up"></i> +12.5%</span>
-                            </div>
-                            <div class="stat-icon clickable" onclick="window.activeApp.showFilteredList('profit')"
-                                title="View all">
-                                <i data-lucide="wallet"></i>
-                            </div>
-                        </div>
-                        <div class="stat-card sunset-gradient">
-                            <div class="stat-info">
-                                <h3 data-i18n="total-expense">Total Expense</h3>
-                                <p class="value">0.00</p>
-                                <span class="trend down"><i data-lucide="trending-down"></i> Based on Cost</span>
-                            </div>
-                            <div class="stat-icon clickable" onclick="window.activeApp.showFilteredList('expense')"
-                                title="View all">
-                                <i data-lucide="credit-card"></i>
-                            </div>
-                        </div>
-                        <div class="stat-card berry-gradient">
-                            <div class="stat-info">
-                                <h3 data-i18n="low-stock">Low Stock</h3>
-                                <p class="value">0</p>
-                                <span class="trend warn"><i data-lucide="alert-circle"></i> Requires attention</span>
-                            </div>
-                            <div class="stat-icon clickable" onclick="window.activeApp.showFilteredList('low-stock')"
-                                title="View all">
-                                <i data-lucide="package"></i>
-                            </div>
-                        </div>
-                        <div class="stat-card forest-gradient">
-                            <div class="stat-info">
-                                <h3 data-i18n="inventory-count">Inventory Items</h3>
-                                <p class="value">0</p>
-                                <span class="trend up"><i data-lucide="box"></i> Active items</span>
-                            </div>
-                            <div class="stat-icon">
-                                <i data-lucide="database"></i>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="chart-section glass-card">
-                        <div class="chart-header">
-                            <h2 data-i18n="recent-activity">📊 Recent Activity</h2>
-                        </div>
-                        <div class="chart-container">
-                            <canvas id="profitExpenseChart"></canvas>
-                        </div>
-                    </div>
-                    <div class="recent-activity glass-card">
-                        <div class="card-header">
-                            <h2 data-i18n="recent-activity">Recent Activity</h2>
-                        </div>
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th data-i18n="date">Date</th>
-                                    <th data-i18n="description">Description</th>
-                                    <th data-i18n="type">Type</th>
-                                    <th data-i18n="amount">Amount</th>
-                                    <th data-i18n="status">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="recent-transactions"></tbody>
-                        </table>
-                        <div id="dash-pagination"></div>
-                    </div>
-                </section>
+                <!-- Content will be rendered by app.js -->
             </div>
         </main>
     </div>
