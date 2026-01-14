@@ -127,6 +127,35 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
+    // Forgot Password Logic
+    const forgotBtn = document.getElementById('forgot-password');
+    if (forgotBtn) {
+        forgotBtn.onclick = async (e) => {
+            e.preventDefault();
+            const email = authEmail.value;
+            if (!email) {
+                authError.innerText = "Please enter your email address first.";
+                authError.classList.remove('hidden');
+                authError.style.background = "rgba(239, 68, 68, 0.1)";
+                authError.style.color = "var(--danger)";
+                return;
+            }
+
+            try {
+                await auth.sendPasswordResetEmail(email);
+                authError.innerText = "Success! Password reset email sent. Please check your inbox.";
+                authError.classList.remove('hidden');
+                authError.style.background = "rgba(16, 185, 129, 0.1)";
+                authError.style.color = "var(--success)";
+            } catch (error) {
+                authError.innerText = error.message;
+                authError.classList.remove('hidden');
+                authError.style.background = "rgba(239, 68, 68, 0.1)";
+                authError.style.color = "var(--danger)";
+            }
+        };
+    }
+
     // --- CLOUD SYNC LOGIC ---
     async function loadUserData() {
         if (!currentUser) return;

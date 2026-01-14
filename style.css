@@ -745,6 +745,17 @@ body {
     font-weight: 600;
 }
 
+.forgot-password {
+    font-size: 0.8rem;
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.forgot-password:hover {
+    text-decoration: underline;
+}
+
 .error-msg {
     background: rgba(239, 68, 68, 0.1);
     color: var(--danger);
