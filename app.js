@@ -534,7 +534,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="settings-section">
                     <h3><i data-lucide="database"></i> ${t('settings-data')}</h3>
                     <div class="data-stats mb-1">
-                        <div class="stat-box"><span>${state.inventory.length}</span><small>Items</small></div>
+                        <div class="stat-box"><span>${new Set(state.inventory.map(i => i.name)).size}</span><small>Items</small></div>
                         <div class="stat-box"><span>${state.transactions.length}</span><small>Logs</small></div>
                     </div>
                     <button class="btn-primary mb-1 w-full" onclick="window.activeApp.exportData()" data-i18n="btn-export">${t('btn-export')}</button>
