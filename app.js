@@ -1,6 +1,6 @@
 /**
  * KirokuHub - Enhanced Cloud Version
- * Fixed: Chart now correctly shows Expenses (Red bars) vs Profit (Green bars)
+ * Features: Pagination, Date Pickers, Auto-Sync, Charts, i18n
  */
 
 const firebaseConfig = {
@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const state = {
         transactions: [],
         inventory: [],
+        pagination: { inventory: 1, finance: 1 },
         settings: {
             language: 'en',
             currency: 'MYR',
@@ -120,7 +121,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const [y, m, d] = dateStr.split('-');
             return `${d}/${m}/${y}`;
         }
-        // Legacy M/D/YYYY or similar
         const parts = dateStr.split('/');
         if (parts.length === 3) {
             return `${parts[1].padStart(2, '0')}/${parts[0].padStart(2, '0')}/${parts[2]}`;
@@ -240,7 +240,6 @@ document.addEventListener('DOMContentLoaded', () => {
             e += (parseFloat(i.cost || 0) * (parseFloat(i.stock || 0) + soldQty));
         });
 
-        // Chart Prep - FIX: Include Expenses
         const chartData = {};
         state.transactions.forEach(t => {
             if (!t.date) return;
@@ -324,7 +323,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // 4. Render Inventory
     function renderInventory() {
         const area = document.getElementById('content-area');
-        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        const today = new Date().toISOString().split('T')[0];
+
+        // Paginaton Setup
+        const itemsPerPage = 10;
+        const totalPages = Math.ceil(state.inventory.length / itemsPerPage) || 1;
+        if (state.pagination.inventory > totalPages) state.pagination.inventory = totalPages;
+        const start = (state.pagination.inventory - 1) * itemsPerPage;
+        const currentData = state.inventory.slice(start, start + itemsPerPage);
 
         area.innerHTML = `
             <div class="glass-card mb-2">
@@ -343,19 +349,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 <table class="data-table">
                     <thead><tr><th data-i18n="date">${t('date')}</th><th data-i18n="sku">${t('sku')}</th><th data-i18n="product">${t('product')}</th><th data-i18n="stock">${t('stock')}</th><th data-i18n="cost">${t('cost')}</th><th data-i18n="price">${t('price')}</th><th data-i18n="profit">${t('profit')}</th><th data-i18n="action">${t('action')}</th></tr></thead>
                     <tbody>
-                        ${state.inventory.length === 0 ? `<tr><td colspan="8" align="center">${t('no-data')}</td></tr>` : ''}
-                        ${state.inventory.map((item, idx) => `
-                            <tr>
+                        ${currentData.length === 0 ? `<tr><td colspan="8" align="center">${t('no-data')}</td></tr>` : ''}
+                        ${currentData.map((item, idx) => {
+            const realIdx = start + idx;
+            return `<tr>
                                 <td>${formatDateForDisplay(item.date)}</td>
                                 <td>${item.sku}</td><td>${item.name}</td>
                                 <td style="color:${item.stock < 5 ? 'var(--danger)' : 'inherit'}">${item.stock}</td>
                                 <td>${formatCurrency(item.cost)}</td><td>${formatCurrency(item.price)}</td>
                                 <td style="color:var(--success)">${formatCurrency(item.price - item.cost)}</td>
-                                <td><button class="btn-secondary" onclick="window.activeApp.deleteItem(${idx})" data-i18n="action">Delete</button></td>
-                            </tr>
-                        `).join('')}
+                                <td><button class="btn-secondary" onclick="window.activeApp.deleteItem(${realIdx})" data-i18n="action">Delete</button></td>
+                            </tr>`;
+        }).join('')}
                     </tbody>
                 </table>
+                <div class="pagination-controls mt-2" style="display:flex; justify-content:center; align-items:center; gap:15px;">
+                    <button class="btn-secondary" onclick="window.activeApp.changePage('inventory', -1)" ${state.pagination.inventory === 1 ? 'disabled style="opacity:0.5"' : ''}>< Previous</button>
+                    <span style="font-size:0.9rem; opacity:0.8">Page ${state.pagination.inventory} of ${totalPages}</span>
+                    <button class="btn-secondary" onclick="window.activeApp.changePage('inventory', 1)" ${state.pagination.inventory === totalPages ? 'disabled style="opacity:0.5"' : ''}>Next ></button>
+                </div>
             </div>
         `;
 
@@ -367,11 +379,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const stock = parseInt(document.getElementById('in-stock').value) || 0;
             const cost = parseFloat(document.getElementById('in-cost').value) || 0;
             const price = parseFloat(document.getElementById('in-price').value) || 0;
-
-            // Format Date to DD/MM/YYYY
             const dParts = dateVal.split('-');
             const formattedDate = `${dParts[2]}/${dParts[1]}/${dParts[0]}`;
-
             state.inventory.push({ sku, name, stock, cost, price, date: formattedDate });
             state.transactions.unshift({
                 id: Date.now(), date: formattedDate,
@@ -387,6 +396,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const area = document.getElementById('content-area');
         const sales = state.transactions.filter(t => t.type === 'profit');
         const today = new Date().toISOString().split('T')[0];
+
+        // Pagination Setup
+        const itemsPerPage = 10;
+        const totalPages = Math.ceil(sales.length / itemsPerPage) || 1;
+        if (state.pagination.finance > totalPages) state.pagination.finance = totalPages;
+        const start = (state.pagination.finance - 1) * itemsPerPage;
+        const currentData = sales.slice(start, start + itemsPerPage);
 
         area.innerHTML = `
             <div class="glass-card mb-2">
@@ -405,8 +421,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <table class="data-table">
                      <thead><tr><th data-i18n="date">${t('date')}</th><th data-i18n="desc">${t('desc')}</th><th data-i18n="amount">${t('amount')}</th><th data-i18n="action">${t('action')}</th></tr></thead>
                      <tbody>
-                        ${sales.length === 0 ? `<tr><td colspan="4" align="center">${t('no-data')}</td></tr>` : ''}
-                        ${sales.map((item) => {
+                        ${currentData.length === 0 ? `<tr><td colspan="4" align="center">${t('no-data')}</td></tr>` : ''}
+                        ${currentData.map((item) => {
             const realIdx = state.transactions.indexOf(item);
             return `<tr>
                                 <td>${formatDateForDisplay(item.date)}</td><td>${item.desc}</td>
@@ -416,6 +432,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('')}
                      </tbody>
                 </table>
+                <div class="pagination-controls mt-2" style="display:flex; justify-content:center; align-items:center; gap:15px;">
+                    <button class="btn-secondary" onclick="window.activeApp.changePage('finance', -1)" ${state.pagination.finance === 1 ? 'disabled style="opacity:0.5"' : ''}>< Previous</button>
+                    <span style="font-size:0.9rem; opacity:0.8">Page ${state.pagination.finance} of ${totalPages}</span>
+                    <button class="btn-secondary" onclick="window.activeApp.changePage('finance', 1)" ${state.pagination.finance === totalPages ? 'disabled style="opacity:0.5"' : ''}>Next ></button>
+                </div>
             </div>
         `;
         document.getElementById('add-sale-form').onsubmit = async (e) => {
@@ -424,16 +445,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const sku = document.getElementById('s-sku').value;
             const qty = parseInt(document.getElementById('s-qty').value);
             if (!sku || !qty) return alert("Select Product and Quantity");
-
             const item = state.inventory.find(i => i.sku === sku);
             if (item) {
                 if (item.stock < qty) return alert("Not enough stock!");
                 item.stock -= qty;
-
-                // Format Date
                 const dParts = dateVal.split('-');
                 const formattedDate = `${dParts[2]}/${dParts[1]}/${dParts[0]}`;
-
                 state.transactions.unshift({
                     id: Date.now(), date: formattedDate,
                     sku, desc: `Sale: ${item.name}`, qty, type: 'profit',
@@ -545,7 +562,6 @@ document.addEventListener('DOMContentLoaded', () => {
         deleteItem: async (idx) => {
             if (confirm(t('confirm-delete'))) {
                 const item = state.inventory[idx];
-                // Remove all related transactions to prevent ghost data
                 state.transactions = state.transactions.filter(t => t.sku !== item.sku);
                 state.inventory.splice(idx, 1);
                 await saveData(); renderInventory();
@@ -557,24 +573,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 const item = state.inventory.find(i => i.sku === txn.sku);
 
                 if (item) {
-                    // Reverse the stock effect
                     if (txn.type === 'profit') {
-                        // If it was a sale, add stock back
-                        item.stock += (txn.qty || 0);
+                        item.stock += (txn.qty || 0); // Reverse Sale
                     } else if (txn.type === 'stock-in') {
-                        // If it was a restock/initial, remove stock
-                        item.stock -= (txn.qty || 0);
-                        if (item.stock < 0) item.stock = 0; // Prevent negative stock
+                        item.stock -= (txn.qty || 0); // Reverse Restock
+                        if (item.stock < 0) item.stock = 0;
                     }
                 }
-
                 state.transactions.splice(idx, 1);
                 await saveData();
-
-                // Refresh current view
                 if (document.getElementById('add-item-form')) renderInventory();
                 else if (document.getElementById('add-sale-form')) renderFinance();
                 else renderDashboard();
+            }
+        },
+        changePage: (type, dir) => {
+            if (type === 'inventory') {
+                state.pagination.inventory += dir;
+                renderInventory();
+            } else if (type === 'finance') {
+                state.pagination.finance += dir;
+                renderFinance();
             }
         },
         showFiltered: (type) => { currentFilterType = type; renderFiltered(); },
