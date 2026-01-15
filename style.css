@@ -16,12 +16,13 @@
 }
 
 body.light-mode {
-    --bg-dark: #f8fafc;
+    --bg-dark: #f1f5f9;
+    /* Slightly darker bg to make white cards pop */
     --card-rgb: 255, 255, 255;
     --bg-card: rgba(var(--card-rgb), var(--glass-opacity));
     --text-main: #0f172a;
     --text-muted: #64748b;
-    --border: rgba(0, 0, 0, 0.1);
+    --border: rgba(0, 0, 0, 0.08);
 }
 
 * {
@@ -211,6 +212,7 @@ body {
     border-radius: 15px;
     padding: 1.5rem;
     height: 100%;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .chart-container {
