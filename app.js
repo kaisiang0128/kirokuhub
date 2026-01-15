@@ -1,6 +1,6 @@
 /**
  * KirokuHub - Enhanced Cloud Version
- * Fixed: Missing Pages (Finance), Delete Actions, and Localization
+ * Fixed: Auth Logic Restored, Layout & Features Stabilized
  */
 
 const firebaseConfig = {
@@ -101,7 +101,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     let currentUser = null;
-    let currentFilterType = 'profit'; // profit, expense, low-stock
+    let isLoginMode = true; // NEW: Track login vs signup state
+    let currentFilterType = 'profit';
 
     // 2. Helper Functions
     function t(key) {
@@ -142,7 +143,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         } catch (e) {
             console.error("Save error:", e);
-            alert("Error saving data. Check console.");
         }
     }
 
@@ -159,67 +159,122 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { console.error("Load error:", e); }
     }
 
+
+    // --- AUTHENTICATION LOGIC (RESTORED) ---
+    const authForm = document.getElementById('auth-form');
+    const authEmail = document.getElementById('auth-email');
+    const authPass = document.getElementById('auth-password');
+    const authBtn = document.getElementById('auth-btn');
+    const authError = document.getElementById('auth-error');
+    const googleBtn = document.getElementById('google-btn');
+    const switchAuth = document.getElementById('switch-auth');
+    const authSubtitle = document.getElementById('auth-subtitle');
+
+    if (authForm) {
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = authEmail.value;
+            const pass = authPass.value;
+
+            authError.classList.add('hidden');
+            authBtn.disabled = true;
+            authBtn.innerText = 'Processing...';
+
+            try {
+                if (isLoginMode) {
+                    await auth.signInWithEmailAndPassword(email, pass);
+                } else {
+                    const cred = await auth.createUserWithEmailAndPassword(email, pass);
+                    // Initialize empty user data
+                    await db.collection('users').doc(cred.user.uid).set(state);
+                }
+            } catch (error) {
+                console.error(error);
+                authError.innerText = error.message;
+                authError.classList.remove('hidden');
+                authBtn.innerText = isLoginMode ? 'Login' : 'Sign Up';
+                authBtn.disabled = false;
+            }
+        });
+    }
+
+    if (googleBtn) {
+        googleBtn.addEventListener('click', async () => {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            try {
+                await auth.signInWithPopup(provider);
+            } catch (error) {
+                authError.innerText = error.message;
+                authError.classList.remove('hidden');
+            }
+        });
+    }
+
+    if (switchAuth) {
+        switchAuth.addEventListener('click', (e) => {
+            e.preventDefault();
+            isLoginMode = !isLoginMode;
+            authBtn.innerText = isLoginMode ? 'Login' : 'Sign Up';
+            authSubtitle.innerText = isLoginMode ? 'Welcome back! Please login.' : 'Create a new account.';
+            switchAuth.innerText = isLoginMode ? 'Sign Up' : 'Login';
+            authError.classList.add('hidden');
+        });
+    }
+
+
     // 3. Render Dashboard
     function renderDashboard() {
         const area = document.getElementById('content-area');
         if (!area) return;
 
-        // Calculate stats
         let p = 0;
         state.transactions.forEach(t => { if (t.type === 'profit') p += t.amount; });
         let e = 0;
         state.inventory.forEach(i => {
-            // Cost of goods currently in stock + cost of goods sold
-            // Simplified: Just calculate total cost of all stock ever added? 
-            // Or track 'expense' transactions. 
-            // For now, let's sum up stock * cost for current inventory plus historical expenses if we had them.
-            // Better approach based on previous logic:
-            // Expense = (Current Stock + Sold Quantity) * Cost
             const soldQty = state.transactions
                 .filter(t => t.sku === i.sku && t.type === 'profit')
                 .reduce((s, t) => s + (t.qty || 0), 0);
             e += (parseFloat(i.cost || 0) * (parseFloat(i.stock || 0) + soldQty));
         });
 
-        // Safe chart data
+        // Chart Prep
         const chartData = {};
         state.transactions.forEach(t => {
             if (!t.date) return;
-            const key = t.date.split('/')[2] + '-' + t.date.split('/')[1]; // YYYY-MM for sorting
-            if (!chartData[key]) chartData[key] = { p: 0, e: 0, label: t.date.slice(3) };
+            const key = t.date.split('/')[2] + '-' + t.date.split('/')[1];
+            if (!chartData[key]) chartData[key] = { p: 0, label: t.date.slice(3) };
             if (t.type === 'profit') chartData[key].p += t.amount;
-            // Expense is tricky to chart per day without expense records. We'll leave expense as 0 or impl later.
         });
 
         area.innerHTML = `
             <div class="stats-grid">
                 <div class="stat-card ocean-gradient">
-                    <div class="stat-info"><h3>${t('total-profit')}</h3><p class="value">${formatCurrency(p)}</p></div>
+                    <div class="stat-info"><h3 data-i18n="total-profit">${t('total-profit')}</h3><p class="value">${formatCurrency(p)}</p></div>
                     <div class="stat-icon" onclick="window.activeApp.showFiltered('profit')"><i data-lucide="wallet"></i></div>
                 </div>
                 <div class="stat-card sunset-gradient">
-                    <div class="stat-info"><h3>${t('total-expense')}</h3><p class="value">${formatCurrency(e)}</p></div>
+                    <div class="stat-info"><h3 data-i18n="total-expense">${t('total-expense')}</h3><p class="value">${formatCurrency(e)}</p></div>
                     <div class="stat-icon" onclick="window.activeApp.showFiltered('expense')"><i data-lucide="credit-card"></i></div>
                 </div>
                 <div class="stat-card berry-gradient">
-                    <div class="stat-info"><h3>${t('low-stock')}</h3><p class="value">${state.inventory.filter(i => i.stock < 5).length}</p></div>
+                    <div class="stat-info"><h3 data-i18n="low-stock">${t('low-stock')}</h3><p class="value">${state.inventory.filter(i => i.stock < 5).length}</p></div>
                     <div class="stat-icon" onclick="window.activeApp.showFiltered('low-stock')"><i data-lucide="package"></i></div>
                 </div>
                 <div class="stat-card forest-gradient">
-                    <div class="stat-info"><h3>${t('inventory-count')}</h3><p class="value">${state.inventory.length}</p></div>
+                    <div class="stat-info"><h3 data-i18n="inventory-count">${t('inventory-count')}</h3><p class="value">${state.inventory.length}</p></div>
                     <div class="stat-icon"><i data-lucide="database"></i></div>
                 </div>
             </div>
 
             <div class="chart-section glass-card mb-2">
-                <h2>📊 ${t('recent-activity')}</h2>
+                <h2 data-i18n="recent-activity">📊 ${t('recent-activity')}</h2>
                 <div class="chart-container"><canvas id="mainChart"></canvas></div>
             </div>
 
             <div class="glass-card">
-                <h2 class="mb-1">${t('recent-activity')}</h2>
+                <h2 data-i18n="recent-activity" class="mb-1">${t('recent-activity')}</h2>
                 <table class="data-table">
-                    <thead><tr><th>${t('date')}</th><th>${t('desc')}</th><th>${t('amount')}</th><th>${t('action')}</th></tr></thead>
+                    <thead><tr><th data-i18n="date">${t('date')}</th><th data-i18n="desc">${t('desc')}</th><th data-i18n="amount">${t('amount')}</th><th data-i18n="action">${t('action')}</th></tr></thead>
                     <tbody>
                         ${state.transactions.slice(0, 10).map((item, idx) => `
                             <tr>
@@ -238,7 +293,6 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
 
-        // Render Chart
         const ctx = document.getElementById('mainChart');
         if (ctx) {
             const sortedKeys = Object.keys(chartData).sort().slice(-6);
@@ -261,19 +315,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const area = document.getElementById('content-area');
         area.innerHTML = `
             <div class="glass-card mb-2">
-                <h2>${t('add-product')}</h2>
+                <h2 data-i18n="add-product">${t('add-product')}</h2>
                 <form id="add-item-form" class="automation-flex mt-2">
                     <input type="text" id="in-sku" placeholder="${t('sku')}" required class="flex-grow">
                     <input type="text" id="in-name" placeholder="${t('product')}" required class="flex-grow">
                     <input type="number" id="in-stock" placeholder="${t('stock')}" style="width:80px">
                     <input type="number" id="in-cost" placeholder="${t('cost')}" style="width:100px">
                     <input type="number" id="in-price" placeholder="${t('price')}" style="width:100px">
-                    <button class="btn-primary">${t('add-product')}</button>
+                    <button class="btn-primary" data-i18n="add-product">${t('add-product')}</button>
                 </form>
             </div>
             <div class="glass-card">
                 <table class="data-table">
-                    <thead><tr><th>${t('sku')}</th><th>${t('product')}</th><th>${t('stock')}</th><th>${t('cost')}</th><th>${t('price')}</th><th>${t('profit')}</th><th>${t('action')}</th></tr></thead>
+                    <thead><tr><th data-i18n="sku">${t('sku')}</th><th data-i18n="product">${t('product')}</th><th data-i18n="stock">${t('stock')}</th><th data-i18n="cost">${t('cost')}</th><th data-i18n="price">${t('price')}</th><th data-i18n="profit">${t('profit')}</th><th data-i18n="action">${t('action')}</th></tr></thead>
                     <tbody>
                         ${state.inventory.length === 0 ? `<tr><td colspan="7" align="center">${t('no-data')}</td></tr>` : ''}
                         ${state.inventory.map((item, idx) => `
@@ -284,7 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <td>${formatCurrency(item.cost)}</td>
                                 <td>${formatCurrency(item.price)}</td>
                                 <td style="color:var(--success)">${formatCurrency(item.price - item.cost)}</td>
-                                <td><button class="btn-secondary" onclick="window.activeApp.deleteItem(${idx})">Delete</button></td>
+                                <td><button class="btn-secondary" onclick="window.activeApp.deleteItem(${idx})" data-i18n="action">Delete</button></td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -319,29 +373,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
         area.innerHTML = `
             <div class="glass-card mb-2">
-                <h2>${t('add-sale')}</h2>
+                <h2 data-i18n="add-sale">${t('add-sale')}</h2>
                 <form id="add-sale-form" class="automation-flex mt-2">
                     <select id="s-sku" class="flex-grow settings-select" style="max-width:300px">
                         <option value="">Select SKU</option>
                         ${state.inventory.map(i => `<option value="${i.sku}">${i.sku} - ${i.name} (Stock: ${i.stock})</option>`).join('')}
                     </select>
                     <input type="number" id="s-qty" placeholder="Qty" style="width:80px; padding:10px; border-radius:8px; border:1px solid var(--border); background:rgba(255,255,255,0.05); color:white">
-                    <button class="btn-primary">${t('add-sale')}</button>
+                    <button class="btn-primary" data-i18n="add-sale">${t('add-sale')}</button>
                 </form>
             </div>
             <div class="glass-card">
                 <table class="data-table">
-                     <thead><tr><th>${t('date')}</th><th>${t('desc')}</th><th>${t('amount')}</th><th>${t('action')}</th></tr></thead>
+                     <thead><tr><th data-i18n="date">${t('date')}</th><th data-i18n="desc">${t('desc')}</th><th data-i18n="amount">${t('amount')}</th><th data-i18n="action">${t('action')}</th></tr></thead>
                      <tbody>
                         ${sales.length === 0 ? `<tr><td colspan="4" align="center">${t('no-data')}</td></tr>` : ''}
                         ${sales.map((item) => {
-            // find original index to delete
             const realIdx = state.transactions.indexOf(item);
             return `<tr>
                                 <td>${item.date}</td>
                                 <td>${item.desc}</td>
                                 <td style="color:var(--success)">+ ${formatCurrency(item.amount)}</td>
-                                <td><button class="btn-secondary" onclick="window.activeApp.deleteTransaction(${realIdx})">Delete</button></td>
+                                <td><button class="btn-secondary" onclick="window.activeApp.deleteTransaction(${realIdx})" data-i18n="action">Delete</button></td>
                             </tr>`;
         }).join('')}
                      </tbody>
@@ -381,26 +434,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="settings-section">
                     <h3><i data-lucide="user"></i> ${t('settings-profile')}</h3>
                     <div class="settings-option">
-                        <label>${t('label-name')}</label>
+                        <label data-i18n="label-name">${t('label-name')}</label>
                         <input type="text" id="set-name" class="settings-input" value="${currentUser.displayName || ''}">
                     </div>
                     <div class="settings-option">
-                        <label>${t('label-password')}</label>
+                        <label data-i18n="label-password">${t('label-password')}</label>
                         <input type="password" id="set-pass" class="settings-input" placeholder="New Password">
                     </div>
-                    <button class="btn-primary w-full" onclick="window.activeApp.updateProfile()">${t('btn-update')}</button>
+                    <button class="btn-primary w-full" onclick="window.activeApp.updateProfile()" data-i18n="btn-update">${t('btn-update')}</button>
                 </div>
                 <div class="settings-section">
                     <h3><i data-lucide="globe"></i> ${t('settings-localization')}</h3>
                     <div class="settings-option">
-                        <label>${t('label-lang')}</label>
+                        <label data-i18n="label-lang">${t('label-lang')}</label>
                         <select id="set-lang" class="settings-select" onchange="window.activeApp.changeLang(this.value)">
                             <option value="en" ${state.settings.language === 'en' ? 'selected' : ''}>English</option>
                             <option value="cn" ${state.settings.language === 'cn' ? 'selected' : ''}>简体中文</option>
                         </select>
                     </div>
                     <div class="settings-option">
-                        <label>${t('label-currency')}</label>
+                        <label data-i18n="label-currency">${t('label-currency')}</label>
                         <select id="set-currency" class="settings-select" onchange="window.activeApp.changeCurrency(this.value)">
                             ${['MYR', 'PHP', 'USD', 'SGD', 'IDR', 'THB', 'EUR', 'GBP', 'JPY', 'KRW'].map(c =>
             `<option value="${c}" ${state.settings.currency === c ? 'selected' : ''}>${c}</option>`
@@ -411,7 +464,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="settings-section">
                     <h3><i data-lucide="palette"></i> ${t('settings-appearance')}</h3>
                     <div class="settings-option">
-                        <label>${t('label-theme')}</label>
+                        <label data-i18n="label-theme">${t('label-theme')}</label>
                         <div class="theme-selector">
                             <button class="theme-btn ${state.settings.theme === 'dark' ? 'active' : ''}" onclick="window.activeApp.changeTheme('dark')">Dark</button>
                             <button class="theme-btn ${state.settings.theme === 'light' ? 'active' : ''}" onclick="window.activeApp.changeTheme('light')">Light</button>
@@ -430,8 +483,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="stat-box"><span>${state.inventory.length}</span><small>Items</small></div>
                         <div class="stat-box"><span>${state.transactions.length}</span><small>Logs</small></div>
                     </div>
-                    <button class="btn-primary mb-1 w-full" onclick="window.activeApp.exportData()">${t('btn-export')}</button>
-                    <button class="btn-danger-outline" onclick="document.getElementById('import-input').click()">${t('btn-import')}</button>
+                    <button class="btn-primary mb-1 w-full" onclick="window.activeApp.exportData()" data-i18n="btn-export">${t('btn-export')}</button>
+                    <button class="btn-danger-outline" onclick="document.getElementById('import-input').click()" data-i18n="btn-import">${t('btn-import')}</button>
                     <input type="file" id="import-input" style="display:none" onchange="window.activeApp.importData(this)">
                 </div>
             </div>
@@ -450,11 +503,10 @@ document.addEventListener('DOMContentLoaded', () => {
             list = state.transactions.filter(t => t.type === 'profit');
         } else if (currentFilterType === 'expense') {
             title = t('total-expense');
-            // Expense implies stock-in costs for now
             list = state.transactions.filter(t => t.type === 'stock-in');
         } else if (currentFilterType === 'low-stock') {
             title = t('low-stock');
-            list = state.inventory.filter(i => i.stock < 5).map(i => ({ ...i, amount: i.stock, desc: i.name, date: 'Alert' })); // Mock transaction for display
+            list = state.inventory.filter(i => i.stock < 5).map(i => ({ ...i, amount: i.stock, desc: i.name, date: 'Alert' }));
         }
 
         area.innerHTML = `
@@ -483,9 +535,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // 8. Global Router & API
     window.activeApp = {
         renderPage: (page) => {
-            // Update Active Nav
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            const nav = document.querySelector(`.nav-item[data-page="${page}"]`);
+            let selector = `.nav-item[data-page="${page}"]`;
+            let nav = document.querySelector(selector);
             if (nav) nav.classList.add('active');
 
             if (page === 'dashboard') renderDashboard();
@@ -496,7 +548,7 @@ document.addEventListener('DOMContentLoaded', () => {
         deleteItem: async (idx) => {
             if (confirm(t('confirm-delete'))) {
                 const item = state.inventory[idx];
-                state.transactions = state.transactions.filter(t => t.sku !== item.sku); // cascade delete logs
+                state.transactions = state.transactions.filter(t => t.sku !== item.sku);
                 state.inventory.splice(idx, 1);
                 await saveData(); renderInventory();
             }
@@ -504,27 +556,25 @@ document.addEventListener('DOMContentLoaded', () => {
         deleteTransaction: async (idx) => {
             if (confirm(t('confirm-delete'))) {
                 const txn = state.transactions[idx];
-                // Reverse stock effect
                 const item = state.inventory.find(i => i.sku === txn.sku);
-                if (item) {
-                    if (txn.type === 'profit') item.stock += (txn.qty || 0);
-                    // if(txn.type === 'stock-in') item.stock -= (txn.qty || 0); // Not implemented yet
-                }
+                if (item && txn.type === 'profit') item.stock += (txn.qty || 0);
+
                 state.transactions.splice(idx, 1);
                 await saveData();
-                // Reload current page roughly
-                const ctx = document.getElementById('add-item-form') ? 'inventory' :
-                    document.getElementById('add-sale-form') ? 'finance' : 'dashboard';
-                window.activeApp.renderPage(ctx);
+
+                // Smart Reload
+                const area = document.getElementById('content-area');
+                if (document.getElementById('add-item-form')) renderInventory();
+                else if (document.getElementById('add-sale-form')) renderFinance();
+                else renderDashboard();
             }
         },
         showFiltered: (type) => {
             currentFilterType = type;
             renderFiltered();
         },
-        // Settings Implementations
         changeLang: (v) => { state.settings.language = v; updateI18nUI(); saveData(); renderSettings(); },
-        changeCurrency: (v) => { state.settings.currency = v; saveData(); renderSettings(); renderDashboard(); }, // Re-render dashboard to update chart
+        changeCurrency: (v) => { state.settings.currency = v; saveData(); renderSettings(); renderDashboard(); },
         changeTheme: (v) => { state.settings.theme = v; applyTheme(v); saveData(); renderSettings(); },
         changeGlass: (v) => { state.settings.glassOpacity = v; applyGlass(v); saveData(); renderSettings(); },
         updateProfile: async () => {
@@ -559,7 +609,7 @@ document.addEventListener('DOMContentLoaded', () => {
         logout: () => auth.signOut()
     };
 
-    // 9. Auth Listener
+    // 9. Auth Listener (Global)
     auth.onAuthStateChanged(async (user) => {
         if (user) {
             currentUser = user;
@@ -571,6 +621,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const name = user.displayName || user.email.split('@')[0];
             const nameEl = document.getElementById('display-name');
             if (nameEl) nameEl.innerText = name.toUpperCase();
+
             const av = document.getElementById('user-avatar');
             if (av) av.innerText = name.charAt(0).toUpperCase();
 
@@ -596,7 +647,6 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const q = document.getElementById('search-input').value.toLowerCase();
             if (!q) return;
-            // Render basic search results manually
             const res = state.transactions.filter(t => t.desc.toLowerCase().includes(q) || (t.sku && t.sku.toLowerCase().includes(q)));
             const area = document.getElementById('content-area');
             area.innerHTML = `
