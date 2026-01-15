@@ -271,7 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="stat-icon" onclick="window.activeApp.showFiltered('low-stock')"><i data-lucide="package"></i></div>
                 </div>
                 <div class="stat-card forest-gradient">
-                    <div class="stat-info"><h3 data-i18n="inventory-count">${t('inventory-count')}</h3><p class="value">${state.inventory.length}</p></div>
+                    <div class="stat-info"><h3 data-i18n="inventory-count">${t('inventory-count')}</h3><p class="value">${new Set(state.inventory.map(i => i.name)).size}</p></div>
                     <div class="stat-icon"><i data-lucide="database"></i></div>
                 </div>
             </div>
