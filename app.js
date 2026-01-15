@@ -309,10 +309,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // 4. Render Inventory
     function renderInventory() {
         const area = document.getElementById('content-area');
+        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
         area.innerHTML = `
             <div class="glass-card mb-2">
                 <h2 data-i18n="add-product">${t('add-product')}</h2>
                 <form id="add-item-form" class="automation-flex mt-2">
+                    <input type="date" id="in-date" value="${today}" class="settings-input" style="max-width:140px">
                     <input type="text" id="in-sku" placeholder="${t('sku')}" required class="flex-grow">
                     <input type="text" id="in-name" placeholder="${t('product')}" required class="flex-grow">
                     <input type="number" id="in-stock" placeholder="${t('stock')}" style="width:80px">
@@ -323,11 +326,12 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <div class="glass-card">
                 <table class="data-table">
-                    <thead><tr><th data-i18n="sku">${t('sku')}</th><th data-i18n="product">${t('product')}</th><th data-i18n="stock">${t('stock')}</th><th data-i18n="cost">${t('cost')}</th><th data-i18n="price">${t('price')}</th><th data-i18n="profit">${t('profit')}</th><th data-i18n="action">${t('action')}</th></tr></thead>
+                    <thead><tr><th data-i18n="date">${t('date')}</th><th data-i18n="sku">${t('sku')}</th><th data-i18n="product">${t('product')}</th><th data-i18n="stock">${t('stock')}</th><th data-i18n="cost">${t('cost')}</th><th data-i18n="price">${t('price')}</th><th data-i18n="profit">${t('profit')}</th><th data-i18n="action">${t('action')}</th></tr></thead>
                     <tbody>
-                        ${state.inventory.length === 0 ? `<tr><td colspan="7" align="center">${t('no-data')}</td></tr>` : ''}
+                        ${state.inventory.length === 0 ? `<tr><td colspan="8" align="center">${t('no-data')}</td></tr>` : ''}
                         ${state.inventory.map((item, idx) => `
                             <tr>
+                                <td>${item.date || '-'}</td>
                                 <td>${item.sku}</td><td>${item.name}</td>
                                 <td style="color:${item.stock < 5 ? 'var(--danger)' : 'inherit'}">${item.stock}</td>
                                 <td>${formatCurrency(item.cost)}</td><td>${formatCurrency(item.price)}</td>
@@ -342,14 +346,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('add-item-form').onsubmit = async (e) => {
             e.preventDefault();
+            const dateVal = document.getElementById('in-date').value;
             const sku = document.getElementById('in-sku').value;
             const name = document.getElementById('in-name').value;
             const stock = parseInt(document.getElementById('in-stock').value) || 0;
             const cost = parseFloat(document.getElementById('in-cost').value) || 0;
             const price = parseFloat(document.getElementById('in-price').value) || 0;
-            state.inventory.push({ sku, name, stock, cost, price, date: new Date().toLocaleDateString() });
+
+            // Format Date to DD/MM/YYYY
+            const dParts = dateVal.split('-');
+            const formattedDate = `${dParts[2]}/${dParts[1]}/${dParts[0]}`;
+
+            state.inventory.push({ sku, name, stock, cost, price, date: formattedDate });
             state.transactions.unshift({
-                id: Date.now(), date: new Date().toLocaleDateString('en-GB'),
+                id: Date.now(), date: formattedDate,
                 sku, desc: `Initial: ${name}`, qty: stock, type: 'stock-in', amount: (cost * stock), category: 'Stock'
             });
             await saveData(); renderInventory();
@@ -361,10 +371,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderFinance() {
         const area = document.getElementById('content-area');
         const sales = state.transactions.filter(t => t.type === 'profit');
+        const today = new Date().toISOString().split('T')[0];
+
         area.innerHTML = `
             <div class="glass-card mb-2">
                 <h2 data-i18n="add-sale">${t('add-sale')}</h2>
                 <form id="add-sale-form" class="automation-flex mt-2">
+                    <input type="date" id="s-date" value="${today}" class="settings-input" style="max-width:140px">
                     <select id="s-sku" class="flex-grow settings-select" style="max-width:300px">
                         <option value="">Select SKU</option>
                         ${state.inventory.map(i => `<option value="${i.sku}">${i.sku} - ${i.name} (Stock: ${i.stock})</option>`).join('')}
@@ -392,15 +405,22 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         document.getElementById('add-sale-form').onsubmit = async (e) => {
             e.preventDefault();
+            const dateVal = document.getElementById('s-date').value;
             const sku = document.getElementById('s-sku').value;
             const qty = parseInt(document.getElementById('s-qty').value);
             if (!sku || !qty) return alert("Select Product and Quantity");
+
             const item = state.inventory.find(i => i.sku === sku);
             if (item) {
                 if (item.stock < qty) return alert("Not enough stock!");
                 item.stock -= qty;
+
+                // Format Date
+                const dParts = dateVal.split('-');
+                const formattedDate = `${dParts[2]}/${dParts[1]}/${dParts[0]}`;
+
                 state.transactions.unshift({
-                    id: Date.now(), date: new Date().toLocaleDateString('en-GB'),
+                    id: Date.now(), date: formattedDate,
                     sku, desc: `Sale: ${item.name}`, qty, type: 'profit',
                     amount: (item.price - item.cost) * qty, category: 'Sales'
                 });
