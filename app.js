@@ -337,11 +337,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h2 data-i18n="add-product">${t('add-product')}</h2>
                 <form id="add-item-form" class="automation-flex mt-2">
                     <input type="date" id="in-date" value="${today}" class="settings-input" style="max-width:140px">
-                    <input type="text" id="in-sku" placeholder="${t('sku')}" required class="flex-grow">
-                    <input type="text" id="in-name" placeholder="${t('product')}" required class="flex-grow">
-                    <input type="number" id="in-stock" placeholder="${t('stock')}" style="width:80px">
-                    <input type="number" id="in-cost" placeholder="${t('cost')}" style="width:100px">
-                    <input type="number" id="in-price" placeholder="${t('price')}" style="width:100px">
+                    <input type="text" id="in-sku" placeholder="${t('sku')}" required class="settings-input flex-grow">
+                    <input type="text" id="in-name" placeholder="${t('product')}" required class="settings-input flex-grow">
+                    <input type="number" id="in-stock" placeholder="${t('stock')}" class="settings-input" style="width:80px">
+                    <input type="number" id="in-cost" placeholder="${t('cost')}" class="settings-input" style="width:100px">
+                    <input type="number" id="in-price" placeholder="${t('price')}" class="settings-input" style="width:100px">
                     <button class="btn-primary" data-i18n="add-product">${t('add-product')}</button>
                 </form>
             </div>
@@ -431,7 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <option value="">Select SKU</option>
                         ${state.inventory.map(i => `<option value="${i.sku}">${i.sku} - ${i.name} (Stock: ${i.stock})</option>`).join('')}
                     </select>
-                    <input type="number" id="s-qty" placeholder="Qty" style="width:80px; padding:10px; border-radius:8px; border:1px solid var(--border); background:rgba(255,255,255,0.05); color:white">
+                    <input type="number" id="s-qty" placeholder="Qty" class="settings-input" style="width:80px">
                     <button class="btn-primary" data-i18n="add-sale">${t('add-sale')}</button>
                 </form>
             </div>
