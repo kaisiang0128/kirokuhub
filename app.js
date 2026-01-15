@@ -1,6 +1,6 @@
 /**
- * KirokuHub - Enhanced Cloud Version
- * Features: Pagination, Date Pickers, Auto-Sync, Charts, i18n
+ * KirokuHub - Unified Version
+ * Features: Pagination, Custom Pricing, Auto-Sync, Light Mode Fix
  */
 
 const firebaseConfig = {
@@ -240,6 +240,8 @@ document.addEventListener('DOMContentLoaded', () => {
             e += (parseFloat(i.cost || 0) * (parseFloat(i.stock || 0) + soldQty));
         });
 
+        const uniqueItems = new Set(state.inventory.map(i => i.name)).size;
+
         const chartData = {};
         state.transactions.forEach(t => {
             if (!t.date) return;
@@ -271,7 +273,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="stat-icon" onclick="window.activeApp.showFiltered('low-stock')"><i data-lucide="package"></i></div>
                 </div>
                 <div class="stat-card forest-gradient">
-                    <div class="stat-info"><h3 data-i18n="inventory-count">${t('inventory-count')}</h3><p class="value">${new Set(state.inventory.map(i => i.name)).size}</p></div>
+                    <div class="stat-info"><h3 data-i18n="inventory-count">${t('inventory-count')}</h3><p class="value">${uniqueItems}</p></div>
                     <div class="stat-icon"><i data-lucide="database"></i></div>
                 </div>
             </div>
@@ -371,14 +373,13 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
 
-        // Auto-fill Listener
+        // Auto-fill Listener for Inventory
         setTimeout(() => {
             const skuIn = document.getElementById('in-sku');
             if (skuIn) {
                 skuIn.addEventListener('input', (e) => {
                     const val = e.target.value.trim();
                     if (!val) return;
-                    // Find latest entry for this SKU
                     const found = state.inventory.slice().reverse().find(i => i.sku === val);
                     if (found) {
                         document.getElementById('in-name').value = found.name;
@@ -415,7 +416,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const sales = state.transactions.filter(t => t.type === 'profit');
         const today = new Date().toISOString().split('T')[0];
 
-        // Pagination Setup
         const itemsPerPage = 10;
         const totalPages = Math.ceil(sales.length / itemsPerPage) || 1;
         if (state.pagination.finance > totalPages) state.pagination.finance = totalPages;
@@ -431,6 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <option value="">Select SKU</option>
                         ${state.inventory.map(i => `<option value="${i.sku}">${i.sku} - ${i.name} (Stock: ${i.stock})</option>`).join('')}
                     </select>
+                    <input type="number" id="s-price" placeholder="Price" class="settings-input" style="width:100px">
                     <input type="number" id="s-qty" placeholder="Qty" class="settings-input" style="width:80px">
                     <button class="btn-primary" data-i18n="add-sale">${t('add-sale')}</button>
                 </form>
@@ -457,22 +458,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
         `;
+
+        // Auto-fill price
+        setTimeout(() => {
+            const sSku = document.getElementById('s-sku');
+            if (sSku) {
+                sSku.addEventListener('change', (e) => {
+                    const item = state.inventory.find(i => i.sku === e.target.value);
+                    if (item) {
+                        document.getElementById('s-price').value = item.price;
+                    }
+                });
+            }
+        }, 100);
+
         document.getElementById('add-sale-form').onsubmit = async (e) => {
             e.preventDefault();
             const dateVal = document.getElementById('s-date').value;
             const sku = document.getElementById('s-sku').value;
             const qty = parseInt(document.getElementById('s-qty').value);
-            if (!sku || !qty) return alert("Select Product and Quantity");
+            const sellPrice = parseFloat(document.getElementById('s-price').value);
+
+            if (!sku || !qty || !sellPrice) return alert("Select Product, Price and Quantity");
             const item = state.inventory.find(i => i.sku === sku);
             if (item) {
                 if (item.stock < qty) return alert("Not enough stock!");
                 item.stock -= qty;
                 const dParts = dateVal.split('-');
                 const formattedDate = `${dParts[2]}/${dParts[1]}/${dParts[0]}`;
+
+                // Calculate profit using custom sellPrice
+                const profit = (sellPrice - item.cost) * qty;
+
                 state.transactions.unshift({
                     id: Date.now(), date: formattedDate,
                     sku, desc: `Sale: ${item.name}`, qty, type: 'profit',
-                    amount: (item.price - item.cost) * qty, category: 'Sales'
+                    amount: profit, category: 'Sales'
                 });
                 await saveData(); renderFinance();
             }
