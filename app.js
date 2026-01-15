@@ -580,8 +580,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         area.innerHTML = `
             <div class="glass-card mb-2"><div style="display:flex; justify-content:space-between"><h2>${title}</h2><button class="btn-secondary" onclick="window.activeApp.renderPage('dashboard')">Back</button></div></div>
-            <div class="glass-card"><table class="data-table"><thead><tr><th>${t('date')}</th><th>${t('desc')}</th><th>${currentFilterType === 'low-stock' ? 'Stock' : t('amount')}</th></tr></thead><tbody>
-                ${list.map(item => `<tr><td>${item.date}</td><td>${item.desc}</td><td>${currentFilterType === 'low-stock' ? item.stock : formatCurrency(item.amount)}</td></tr>`).join('')}
+            <div class="glass-card"><table class="data-table"><thead><tr><th>${t('date')}</th><th>${t('sku')}</th><th>${t('desc')}</th><th>${currentFilterType === 'low-stock' ? 'Stock' : t('amount')}</th></tr></thead><tbody>
+                ${list.map(item => `<tr><td>${item.date}</td><td>${item.sku || '-'}</td><td>${item.desc}</td><td>${currentFilterType === 'low-stock' ? item.stock : formatCurrency(item.amount)}</td></tr>`).join('')}
             </tbody></table></div>
         `;
         lucide.createIcons();
