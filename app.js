@@ -358,7 +358,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return `<tr>
                                 <td>${formatDateForDisplay(item.date)}</td>
                                 <td>${item.sku}</td><td>${item.name}</td>
-                                <td title="${item.source || '-'}">${item.source || '-'}</td>
+                                <td title="${item.source || '-'}" style="display:flex; align-items:center; gap:5px;">
+                                    ${item.source && item.source.startsWith('http')
+                    ? `<a href="${item.source}" target="_blank" style="color:var(--primary); max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Link</a>`
+                    : `<span style="max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${item.source || '-'}</span>`}
+                                    ${item.source && item.source !== '-' ? `<button class="btn-xs" onclick="navigator.clipboard.writeText('${item.source.replace(/'/g, "\\'")}'); alert('Copied!')" title="Copy">📋</button>` : ''}
+                                </td>
                                 <td style="color:${item.stock < 5 ? 'var(--danger)' : 'inherit'}">${item.stock}</td>
                                 <td>${formatCurrency(item.cost)}</td><td>${formatCurrency(item.price)}</td>
                                 <td style="color:var(--success)">${formatCurrency(item.price - item.cost)}</td>
