@@ -445,18 +445,29 @@ document.addEventListener('DOMContentLoaded', () => {
                     </select>
                     <input type="number" id="s-price" placeholder="Price" class="settings-input" style="width:100px">
                     <input type="number" id="s-qty" placeholder="Qty" class="settings-input" style="width:80px">
+                    <select id="s-channel" class="settings-select" style="width:120px">
+                        <option value="Shopee">Shopee</option>
+                        <option value="Lazada">Lazada</option>
+                        <option value="TikTok">TikTok</option>
+                        <option value="Facebook">Facebook</option>
+                        <option value="WhatsApp">WhatsApp</option>
+                        <option value="Offline">Offline</option>
+                        <option value="Other">Other</option>
+                    </select>
                     <button class="btn-primary" data-i18n="add-sale">${t('add-sale')}</button>
                 </form>
             </div>
             <div class="glass-card">
                 <table class="data-table">
-                     <thead><tr><th data-i18n="date">${t('date')}</th><th data-i18n="desc">${t('desc')}</th><th data-i18n="amount">${t('amount')}</th><th data-i18n="action">${t('action')}</th></tr></thead>
+                     <thead><tr><th data-i18n="date">${t('date')}</th><th data-i18n="desc">${t('desc')}</th><th>Channel</th><th data-i18n="amount">${t('amount')}</th><th data-i18n="action">${t('action')}</th></tr></thead>
                      <tbody>
-                        ${currentData.length === 0 ? `<tr><td colspan="4" align="center">${t('no-data')}</td></tr>` : ''}
+                        ${currentData.length === 0 ? `<tr><td colspan="5" align="center">${t('no-data')}</td></tr>` : ''}
                         ${currentData.map((item) => {
             const realIdx = state.transactions.indexOf(item);
             return `<tr>
-                                <td>${formatDateForDisplay(item.date)}</td><td>${item.desc}</td>
+                                <td>${formatDateForDisplay(item.date)}</td>
+                                <td>${item.desc}</td>
+                                <td>${item.channel || '-'}</td>
                                 <td style="color:var(--success)">+ ${formatCurrency(item.amount)}</td>
                                 <td><button class="btn-secondary" onclick="window.activeApp.deleteTransaction(${realIdx})" data-i18n="action">Delete</button></td>
                             </tr>`;
@@ -493,6 +504,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!sku || !qty || !sellPrice) return alert("Select Product, Price and Quantity");
             const item = state.inventory.find(i => i.sku === sku);
+            const channel = document.getElementById('s-channel').value;
             if (item) {
                 if (item.stock < qty) return alert("Not enough stock!");
                 item.stock -= qty;
@@ -505,7 +517,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 state.transactions.unshift({
                     id: Date.now(), date: formattedDate,
                     sku, desc: `Sale: ${item.name}`, qty, type: 'profit',
-                    amount: profit, category: 'Sales'
+                    amount: profit, category: 'Sales', channel: channel
                 });
                 await saveData(); renderFinance();
             }
