@@ -342,7 +342,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     <input type="text" id="in-sku" placeholder="${t('sku')}" required class="settings-input flex-grow">
                     <input type="text" id="in-name" placeholder="${t('product')}" required class="settings-input flex-grow">
                     <input type="number" id="in-stock" placeholder="${t('stock')}" class="settings-input" style="width:80px">
-                    <input type="number" id="in-cost" placeholder="${t('cost')}" class="settings-input" style="width:100px">
+                    <div style="display:flex; gap:5px; align-items:center">
+                        <input type="number" id="in-cost" placeholder="${t('cost')}" class="settings-input" style="width:80px">
+                        <select id="in-cost-currency" class="settings-select" style="width:70px">
+                            <option value="MYR">MYR</option>
+                            <option value="CNY">CNY</option>
+                            <option value="USD">USD</option>
+                            <option value="PHP">PHP</option>
+                            <option value="SGD">SGD</option>
+                            <option value="IDR">IDR</option>
+                            <option value="THB">THB</option>
+                            <option value="EUR">EUR</option>
+                        </select>
+                    </div>
                     <input type="number" id="in-price" placeholder="${t('price')}" class="settings-input" style="width:100px">
                     <input type="text" id="in-source" placeholder="Source" class="settings-input" style="width:120px">
                     <button class="btn-primary" data-i18n="add-product">${t('add-product')}</button>
@@ -408,11 +420,30 @@ document.addEventListener('DOMContentLoaded', () => {
             const name = document.getElementById('in-name').value;
             const source = document.getElementById('in-source').value || '-';
             const stock = parseInt(document.getElementById('in-stock').value) || 0;
-            const cost = parseFloat(document.getElementById('in-cost').value) || 0;
+            let cost = parseFloat(document.getElementById('in-cost').value) || 0;
+            const costCurrency = document.getElementById('in-cost-currency').value;
             const price = parseFloat(document.getElementById('in-price').value) || 0;
+
+            // Exchange rates to MYR (approximate)
+            const exchangeRates = {
+                'MYR': 1,
+                'CNY': 0.65,
+                'USD': 4.47,
+                'PHP': 0.08,
+                'SGD': 3.30,
+                'IDR': 0.00028,
+                'THB': 0.13,
+                'EUR': 4.80
+            };
+
+            // Convert cost to MYR
+            if (costCurrency !== 'MYR' && exchangeRates[costCurrency]) {
+                cost = cost * exchangeRates[costCurrency];
+            }
+
             const dParts = dateVal.split('-');
             const formattedDate = `${dParts[2]}/${dParts[1]}/${dParts[0]}`;
-            state.inventory.push({ sku, name, source, stock, cost, price, date: formattedDate });
+            state.inventory.push({ sku, name, source, stock, cost: parseFloat(cost.toFixed(2)), price, date: formattedDate });
             state.transactions.unshift({
                 id: Date.now(), date: formattedDate,
                 sku, desc: `Initial: ${name}`, qty: stock, type: 'stock-in', amount: (cost * stock), category: 'Stock'
